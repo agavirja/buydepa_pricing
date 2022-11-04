@@ -858,7 +858,7 @@ def getpricing(inputvar):
         valores = list(dataregistrostock.apply(lambda x: tuple(x), axis=1).unique())
         db_connection = sql.connect(user=user, password=password, host=host, database=database)
         cursor        = db_connection.cursor()
-        cursor.executemany("""DELETE FROM `{database}`.`data_api_pricing_registros` WHERE (`id` = %s ); """,valores)
+        cursor.executemany(f"""DELETE FROM `{database}`.`data_api_pricing_registros` WHERE (`id` = %s ); """,valores)
         db_connection.commit()
         db_connection.close()
 
@@ -866,7 +866,7 @@ def getpricing(inputvar):
         valores = list(datacomparestock.apply(lambda x: tuple(x), axis=1).unique())
         db_connection = sql.connect(user=user, password=password, host=host, database=database)
         cursor        = db_connection.cursor()
-        cursor.executemany("""DELETE FROM `{database}`.`data_api_pricing_comparables` WHERE (`id` = %s ); """,valores)
+        cursor.executemany(f"""DELETE FROM `{database}`.`data_api_pricing_comparables` WHERE (`id` = %s ); """,valores)
         db_connection.commit()
         db_connection.close()
         
