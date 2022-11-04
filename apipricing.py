@@ -31,10 +31,10 @@ from sqlalchemy.dialects.mysql import DOUBLE
 #-----------------------------------------------------------------------------#
 def pricingforecast(inputvar):
     
-    user     = 'admin'
-    password = 'testBuydepa1!'
-    host     = 'buydepa-market-dev2.cy47rcxrw2g5.us-east-1.rds.amazonaws.com'
-    database = 'colombia'
+    user     = st.secrets["buydepauser"]
+    password = st.secrets["buydepapass"]
+    host     = st.secrets["buydepahost"]
+    database = st.secrets["buydepadatabase"]
     
     mpio_ccdgo   = inputvar['mpio_ccdgo']
     tipoinmueble = inputvar['tipoinmueble']
@@ -42,7 +42,7 @@ def pricingforecast(inputvar):
     
     delta         = 0
     db_connection = sql.connect(user=user, password=password, host=host, database=database)
-    salida        = pd.read_sql(f'SELECT salida FROM colombia.model_outcome WHERE mpio_ccdgo="{mpio_ccdgo}" AND tipoinmueble="{tipoinmueble}" AND tiponegocio="{tiponegocio}"' , con=db_connection)
+    salida        = pd.read_sql(f'SELECT salida FROM {database}.model_outcome WHERE mpio_ccdgo="{mpio_ccdgo}" AND tipoinmueble="{tipoinmueble}" AND tiponegocio="{tiponegocio}"' , con=db_connection)
     db_connection.close()
     salida        = json.loads(salida['salida'].iloc[0])
     options       = salida['options']
@@ -294,19 +294,19 @@ def data_reference(inputvar):
     inputvar['coddir']    = fcoddir
     
     # Bases de datos
-    user          = 'masteruser'
-    password      = 'Aa12345678'
-    host          ='iamadmin.csj9hflolaeq.us-east-2.rds.amazonaws.com'
-    database      = 'prinan'
+    user          = st.secrets["prinanmasteruser"]
+    password      = st.secrets["prinanpass"]
+    host          = st.secrets["prinanhost"]
+    database      = st.secrets["prinandatabase"]
     db_connection = sql.connect(user=user, password=password, host=host, database=database)
-    datacatastro  = pd.read_sql(f"SELECT count(distinct(prechip)) as conjunto_unidades, min(prevetustz) as antiguedad_min, max(prevetustz) as antiguedad_max, latitud, longitud FROM prinan.data_bogota_catastroV3 WHERE coddir='{fcoddir}' AND predirecc LIKE '%AP%'" , con=db_connection)
+    datacatastro  = pd.read_sql(f"SELECT count(distinct(prechip)) as conjunto_unidades, min(prevetustz) as antiguedad_min, max(prevetustz) as antiguedad_max, latitud, longitud FROM {database}.data_bogota_catastroV3 WHERE coddir='{fcoddir}' AND predirecc LIKE '%AP%'" , con=db_connection)
     if datacatastro.empty is False:
         inputvar.update(datacatastro.iloc[0].to_dict())
     if 'latitud' not in inputvar or inputvar['latitud'] is None or 'longitud' not in inputvar or inputvar['longitud'] is None:
         inputvar = georreferenciacion(inputvar)
     latitud        = inputvar['latitud']
     longitud       = inputvar['longitud']
-    dane           = pd.read_sql(f"SELECT dpto_ccdgo,mpio_ccdgo,setu_ccnct,secu_ccnct FROM prinan.SAE_dane WHERE  st_contains(geometry, POINT({longitud}, {latitud}))", con=db_connection)
+    dane           = pd.read_sql(f"SELECT dpto_ccdgo,mpio_ccdgo,setu_ccnct,secu_ccnct FROM {database}.SAE_dane WHERE  st_contains(geometry, POINT({longitud}, {latitud}))", con=db_connection)
     databarrio     = pd.read_sql(f"SELECT scacodigo,scanombre FROM {database}.data_bogota_barriocatastral WHERE st_contains(geometry, POINT({longitud}, {latitud}))", con=db_connection)
     consultabarrio = ''
     if dane.empty is False:
@@ -317,8 +317,8 @@ def data_reference(inputvar):
     if databarrio.empty is False:
         inputvar.update(databarrio.iloc[0].to_dict())
         
-    datastock = [pd.read_sql(f"SELECT areaconstruida,descripcion,direccion,estrato,fecha_inicial,fuente,garajes,habitaciones,id_tabla,latitud,longitud,tiempodeconstruido,tipoinmueble,tiponegocio,url,valorarriendo,valorventa FROM prinan.4M_stockdata WHERE tipoinmueble='{tipoinmueble}' AND coddir='{fcoddir}' AND fecha_inicial>='{fechainicial_conjunto}' AND  (areaconstruida>={areamin} AND areaconstruida<={areamax}) AND  url like '%bogota%'" , con=db_connection),
-                 pd.read_sql(f"SELECT areaconstruida,descripcion,direccion,estrato,fecha_inicial,fuente,garajes,habitaciones,id_tabla,latitud,longitud,tiempodeconstruido,tipoinmueble,tiponegocio,url,valorarriendo,valorventa FROM prinan.4M_stockdata WHERE  {consultabarrio} tipoinmueble='{tipoinmueble}' AND (areaconstruida>={areamin} AND areaconstruida<={areamax}) AND estrato={estrato} AND habitaciones={habitaciones} AND banos={banos} AND garajes={garajes} AND fecha_inicial>='{fechainicial_market}' AND ST_Distance_Sphere(geometry, POINT({longitud},{latitud}))<={metros}" , con=db_connection)]    
+    datastock = [pd.read_sql(f"SELECT areaconstruida,descripcion,direccion,estrato,fecha_inicial,fuente,garajes,habitaciones,id_tabla,latitud,longitud,tiempodeconstruido,tipoinmueble,tiponegocio,url,valorarriendo,valorventa FROM {database}.4M_stockdata WHERE tipoinmueble='{tipoinmueble}' AND coddir='{fcoddir}' AND fecha_inicial>='{fechainicial_conjunto}' AND  (areaconstruida>={areamin} AND areaconstruida<={areamax}) AND  url like '%bogota%'" , con=db_connection),
+                 pd.read_sql(f"SELECT areaconstruida,descripcion,direccion,estrato,fecha_inicial,fuente,garajes,habitaciones,id_tabla,latitud,longitud,tiempodeconstruido,tipoinmueble,tiponegocio,url,valorarriendo,valorventa FROM {database}.4M_stockdata WHERE  {consultabarrio} tipoinmueble='{tipoinmueble}' AND (areaconstruida>={areamin} AND areaconstruida<={areamax}) AND estrato={estrato} AND habitaciones={habitaciones} AND banos={banos} AND garajes={garajes} AND fecha_inicial>='{fechainicial_market}' AND ST_Distance_Sphere(geometry, POINT({longitud},{latitud}))<={metros}" , con=db_connection)]    
     dataconjunto             = datastock[0]
     dataconjunto['tipodata'] = 'Conjunto'    
     dataconjunto['latitud']  = latitud
@@ -824,17 +824,17 @@ def getpricing(inputvar):
     dataresult = dataresultsell.append(dataresultrent)
 
     # Id inmueble ya existente
-    user     ='admin'
-    password ='testBuydepa1!'
-    host     ='buydepa-market-dev2.cy47rcxrw2g5.us-east-1.rds.amazonaws.com'
-    database ='colombia'
+    user     =st.secrets["buydepauser"]
+    password =st.secrets["buydepapass"]
+    host     =st.secrets["buydepahost"]
+    database =st.secrets["buydepadatabase"]
     dataregistrostock = pd.DataFrame()
     datacomparestock  = pd.DataFrame()
     id_inmueble       = inputvar['id_inmueble']
     if id_inmueble is not None:
         db_connection     = sql.connect(user=user, password=password, host=host, database=database)
-        dataregistrostock = pd.read_sql(f"SELECT id FROM colombia.data_api_pricing_registros WHERE id_inmueble={id_inmueble}" , con=db_connection)
-        datacomparestock  = pd.read_sql(f"SELECT id FROM colombia.data_api_pricing_comparables WHERE id_inmueble={id_inmueble}" , con=db_connection)
+        dataregistrostock = pd.read_sql(f"SELECT id FROM {database}.data_api_pricing_registros WHERE id_inmueble={id_inmueble}" , con=db_connection)
+        datacomparestock  = pd.read_sql(f"SELECT id FROM {database}.data_api_pricing_comparables WHERE id_inmueble={id_inmueble}" , con=db_connection)
         db_connection.close()
     
     if 'metros' in dataresult: del dataresult['metros']
@@ -859,7 +859,7 @@ def getpricing(inputvar):
         valores = list(dataregistrostock.apply(lambda x: tuple(x), axis=1).unique())
         db_connection = sql.connect(user=user, password=password, host=host, database=database)
         cursor        = db_connection.cursor()
-        cursor.executemany("""DELETE FROM `colombia`.`data_api_pricing_registros` WHERE (`id` = %s ); """,valores)
+        cursor.executemany("""DELETE FROM `{database}`.`data_api_pricing_registros` WHERE (`id` = %s ); """,valores)
         db_connection.commit()
         db_connection.close()
 
@@ -867,7 +867,7 @@ def getpricing(inputvar):
         valores = list(datacomparestock.apply(lambda x: tuple(x), axis=1).unique())
         db_connection = sql.connect(user=user, password=password, host=host, database=database)
         cursor        = db_connection.cursor()
-        cursor.executemany("""DELETE FROM `colombia`.`data_api_pricing_comparables` WHERE (`id` = %s ); """,valores)
+        cursor.executemany("""DELETE FROM `{database}`.`data_api_pricing_comparables` WHERE (`id` = %s ); """,valores)
         db_connection.commit()
         db_connection.close()
         
